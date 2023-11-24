@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
-#include <fcntl.h>
+#include <fcntl.h> 
 
 #include <iostream>
 #include <algorithm>
@@ -10,58 +10,101 @@
 #include <sstream>
 
 class Bash {
-public:
+private:
     void execute_command(std::vector<std::string>& arg_list) {
     	if (arg_list.empty()) {
             std::cerr << "Error: no command" << std::endl;
             return;
         }
 
-        std::vector<std::pair<std::string, std::string>> output_redirections;
+        std::vector<std::pair<std::string, std::string>> output_redirections; 
+	std::vector<std::pair<std::string, std::string>> input_redirections; 
+
+	bool pipe_exist = false;
+
+	std::vector<std::string> result;
+    	std::string current_string;
+
+    	bool found_pipe = false;
+
+    	for (const std::string& str : arg_list) {
+            if (str == "|") {
+                found_pipe = true;
+            	if (!current_string.empty()) {
+                    result.push_back(current_string);
+                    current_string.clear();
+            	}
+            } else {
+		current_string += " ";
+            	current_string += str;
+            }
+    	}	
+
+    	if (found_pipe && !current_string.empty()) {
+            result.push_back(current_string);
+	    handle_pipe(result);
+            return;
+    	}
+
 
         for (size_t i = 0; i < arg_list.size(); ++i) {
             if (arg_list[i] == ">") {
                 output_redirections.push_back({arg_list[i + 1], ">"});
-                arg_list.erase(arg_list.begin() + i, arg_list.begin() + i + 2); // kjnji arg_list[i]-n u ira hajordy- arg_list[i + 1] - y 
-                --i; 
+                arg_list.erase(arg_list.begin() + i, arg_list.begin() + i + 2); // kjnji arg_list[i]-n u ira hajordy- arg_list[i + 1] - y , for example: ls > f1 > f2 => ls > f2
+                --i; // erase - ic heto index - y -- anenq
             } else if (arg_list[i] == ">>") {
                 output_redirections.push_back({arg_list[i + 1], ">>"});
                 arg_list.erase(arg_list.begin() + i, arg_list.begin() + i + 2);
                 --i; 
-            }
+            } else if (arg_list[i] == "<") {
+            	input_redirections.push_back({arg_list[i + 1], "<"});
+            	arg_list.erase(arg_list.begin() + i, arg_list.begin() + i + 2);
+            	--i; 
+            } 
+
         }
 
-
         std::string command = arg_list[0];
-
 
         char* arr[arg_list.size()];
         for (int i = 0; i < arg_list.size(); ++i) {
             arr[i] = strdup(arg_list[i].c_str()); // aranc strdup - i chi toxnum const char* -> char*
         }
 
-        arr[arg_list.size()] = NULL;
-        //fork a child process
+        arr[arg_list.size()] = nullptr;
+
+	//fork a child process
         pid_t pid = fork();
 
         if (pid == -1) {
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
-        // child process
+             // child process
+	     for (const auto& redirection : input_redirections) {
+           	 // opening file for reading and duplicateing file descriptor to stdin
+            	int fd = open(redirection.first.c_str(), O_RDONLY);
+            	if (fd == -1) {
+                    std::cerr << "Error opening input file\n";
+                    exit(EXIT_FAILURE);
+            	}
+            	dup2(fd, STDIN_FILENO);
+            	close(fd);
+             }
 
-            for (const auto& redirection : output_redirections) {
+            for (const auto &redirection : output_redirections) {
                 int flags = O_WRONLY | O_CREAT;
                 if (redirection.second == ">>") {
-                    flags |= O_APPEND;
+                    flags |= O_APPEND; // verjic avelacnelu hamar flag
                 } else {
-                    flags |= O_TRUNC;
+                    flags |= O_TRUNC; // flag overwrite anelu hamar
                 }
 
+                // open the file for writing and duplicate the file descriptor to stdout
                 int fd = open(redirection.first.c_str(), flags, 0666);
                 if (fd == -1) {
-                    std::cerr << "Error opening output file\n";
-                    exit(EXIT_FAILURE);
+                   std::cerr << "Error opening output file\n";
+                   exit(EXIT_FAILURE);
                 }
                 dup2(fd, STDOUT_FILENO);
                 close(fd);
@@ -72,6 +115,7 @@ public:
                 perror("execvp");
                 exit(EXIT_FAILURE);
             }
+
         } else {
             // parent process
             int status;
@@ -80,6 +124,66 @@ public:
     }
 
 
+    void handle_pipe(std::vector<std::string>& commands) {
+        int size = commands.size();
+	int pipes[size - 1][2];
+
+        for (int i = 0; i < size - 1; ++i) {
+            if (pipe(pipes[i]) == -1) {
+                perror("pipe");
+                return;
+            }
+        } 
+
+        for (int i = 0; i < size; ++i) {
+            pid_t pid = fork();
+
+            if (pid == -1) {
+                perror("fork");
+                return;
+            } else if (pid == 0) {
+                // Child process
+
+                // Connect input/output to pipes if not the first/last command
+                if (i > 0) {
+                    dup2(pipes[i - 1][0], STDIN_FILENO); // vor standart inputy current processi kardacvi pipei reading endic(0) (pipe-i vory vor asocacvuma naxord hramani het) : current processi standart inputy copya linum naxorrd hramani het assocacvox pipeic(reading endic) 
+                    close(pipes[i - 1][0]);
+                }
+
+                if (i < size - 1) {
+                    dup2(pipes[i][1], STDOUT_FILENO); // vor standart outputy current processi write arvi write endum(1) pipe-i vory assocacvuma hajord hramani het
+                    close(pipes[i][1]);
+                }
+
+                // close all other pipes
+                for (int j = 0; j < size - 1; ++j) {
+                    close(pipes[j][0]);
+                    close(pipes[j][1]);
+                }
+
+                // execute the command
+                const char* command = commands[i].c_str();
+                execlp("/bin/sh", "/bin/sh", "-c", command, nullptr); // stex "-c" nra hamara trvum vor vorpes hajord argument trvi commandy vory kara lini vorpes mi string pahvac orinak "grep a" => vor vorpes mi hraman haskacvi "-c" flagn enq talis
+                //perror("execlp");
+                return;
+            }
+        }
+
+        // close all pipes in the parent process
+        for (int i = 0; i < size - 1; ++i) {
+            close(pipes[i][0]);
+            close(pipes[i][1]);
+        }
+
+        // wait for all child processes to finish
+        for (int i = 0; i < size; ++i) {
+            wait(nullptr);
+        }
+    }
+
+
+
+public:
     void execute() {
 	while (true) {
        	    std::cout << "Bash clone: ";
@@ -143,6 +247,5 @@ private:
 
 int main() {
     Bash bash;
-    bash.execute();
-	
+    bash.execute();	
 }
