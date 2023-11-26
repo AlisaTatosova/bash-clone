@@ -16,12 +16,12 @@ Bash clone is command-line shell implemented in C++. It supports common shell co
 - External program execution: Execute external programs and scripts from system directories or specified paths.
 - Pipe functionality: for example: ls | grep a | grep c
 - Redirections:
-  * > (Output Redirection): Redirects the output of a command to a file, creating the file if    it doesn't exist or overwriting its content if it does.
+  *  (Output Redirection): Redirects the output of a command to a file, creating the file if    it doesn't exist or overwriting its content if it does.
   Example: Redirect ls command output to a file named "list.txt"
   ```bash
   ls > list.txt
   ```
-  * >> (Append Output): Appends the output of a command to a file, creating the file if it doesn't exist.
+  *  (Append Output): Appends the output of a command to a file, creating the file if it doesn't exist.
    Example: Append the output of the ls command to a file named "log.txt"
    ```bash
     ls >> log.txt
