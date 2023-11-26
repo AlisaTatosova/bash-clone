@@ -58,7 +58,7 @@ Bash clone is command-line shell implemented in C++. It supports common shell co
 
     During compiling there is need to add -lreadline flag telling the compiler to link your program with the Readline library. 
     ```bash
-    g++ -o shell shell.cpp -lreadline
+    g++ -o shell main.cpp -lreadline
     ```
 
 2. **Run the Shell:**
