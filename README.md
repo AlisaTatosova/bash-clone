@@ -17,22 +17,22 @@ Bash clone is command-line shell implemented in C++. It supports common shell co
 - Pipe functionality: for example: ls | grep a | grep c
 - Redirections:
   * > (Output Redirection): Redirects the output of a command to a file, creating the file if    it doesn't exist or overwriting its content if it does.
-  # Example: Redirect ls command output to a file named "list.txt"
+  Example: Redirect ls command output to a file named "list.txt"
   ```bash
   ls > list.txt
   ```
   * >> (Append Output): Appends the output of a command to a file, creating the file if it doesn't exist.
-  # Example: Append the output of the ls command to a file named "log.txt"
+   Example: Append the output of the ls command to a file named "log.txt"
    ```bash
     ls >> log.txt
     ```
   * < (Input Redirection): Takes input for a command from a file.
-  # Example: Use the contents of a file named "input.txt" as input for the cat command
+  Example: Use the contents of a file named "input.txt" as input for the cat command
   ```bash
   cat < input.txt
    ```
   * << (Here Document): Allows input of multiple lines directly into a command.
-  # Example: Using a here document to input multiple lines to the cat command
+  Example: Using a here document to input multiple lines to the cat command
   ```bash
   cat << EOF
   This is line 1
@@ -43,7 +43,7 @@ Bash clone is command-line shell implemented in C++. It supports common shell co
   
  * | (Piping):
   Sends the output of one command as input to another command.
-  # Example: List the files in the current directory and pipe the output to the 'grep'   command to filter for files containing 'example'
+  Example: List the files in the current directory and pipe the output to the 'grep'   command to filter for files containing 'example'
   ```bash
   ls | grep example
    ```
