@@ -41,7 +41,7 @@ void Bash::execute() {
 
         std::string cmd = arg_list[0]; // separating command
 
-	    if (cmd == "cd") {
+	if (cmd == "cd") {
             if (arg_list.size() == 1) {
                 continue;
             } else if (arg_list[1] == ".") {
